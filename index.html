@@ -1,92 +1,78 @@
 <!DOCTYPE html>
-
-
-<!-- Ultimate Game Stash file--> 
-<!-- For the regularly updating doc go to https://docs.google.com/document/d/1_FmH3BlSBQI7FGgAQL59-ZPe8eCxs35wel6JUyVaG8Q/ -->
 <script>
-window._Yandex_ShowInterstitial = function() {
-    alert("ad no support :(");
-};
+// make it work EVERYWHERE! (monkey patch by onepointfive-real)
+(function() {
+    // 1. Intercept the XMLHttpRequest API (Unity's asset loader)
+    const OriginalXHR = window.XMLHttpRequest;
+    
+    function PatchedXHR() {
+        const xhr = new OriginalXHR();
+        const originalOpen = xhr.open;
 
-window._Yandex_ShowRewarded = function() {
-    alert("ad no support :(");
+        xhr.open = function(method, url, async, user, password) {
+            // If Unity tries to fetch from our dummy secure domain, redirect it locally!
+            if (typeof url === 'string' && url.includes('https://fake-secure-local/')) {
+                url = url.replace('https://fake-secure-local/', './');
+            }
+            return originalOpen.apply(this, [method, url, async, user, password]);
+        };
+        return xhr;
+    }
+    window.XMLHttpRequest = PatchedXHR;
+    Object.assign(window.XMLHttpRequest, OriginalXHR);
+
+    // 2. Intercept the modern Fetch API (for newer Unity configurations)
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        if (typeof input === 'string' && input.includes('https://fake-secure-local/')) {
+            input = input.replace('https://fake-secure-local/', './');
+        } else if (input instanceof Request && input.url.includes('https://fake-secure-local/')) {
+            const localUrl = input.url.replace('https://fake-secure-local/', './');
+            input = new Request(localUrl, input);
+        }
+        return originalFetch(input, init);
+    };
+})();
+</script>
+<script>
+// yagames ad bypass by onepointfive-real, also make sure to remove the sdk.js stuff
+window.YaGames = {
+    init: async function () {
+        return {
+            adv: {
+                showFullscreenAdv: function (opts) {
+                    console.log("Offline fullscreen requested", opts);
+                    const cb = opts?.callbacks;
+                    if (cb?.onOpen) cb.onOpen();
+                    if (cb?.onClose) cb.onClose(true); // true = ad was shown
+                },
+
+                showRewardedVideo: function (opts) {
+                    additonaladskipcalls();
+                    console.log("Offline rewarded video requested", opts);
+                    const cb = opts?.callbacks;
+                    if (cb?.onOpen) cb.onOpen();
+                    // Reward is granted before the ad closes
+                    if (cb?.onRewarded) cb.onRewarded();
+                    if (cb?.onClose) cb.onClose();
+                }
+            }
+        };
+    }
 };
+function additonaladskipcalls() {
+alert("Ads removed by onepointfive-REAL on github");
+}
 </script>
 
 <html lang="en-us">
 <head>
-    <title>Granny HTML</title>
+    <title>Granny HTML5</title>
     <meta charset="utf-8">
     <meta name="robots" content="noindex, nofollow">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link rel="stylesheet" href="./style.css">
-    <script src="./sdk.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: url('./background.png') no-repeat center center fixed;
-            background-size: cover;
-        }
-        #unity-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            left: 0;
-            top: 0;
-        }
-        #unity-loading-bar {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #ffffff;
-            border-radius: 10px;
-            display: block;
-        }
-        #unity-logo {
-            position: absolute;
-            top: calc(50% - 100px);
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: auto;
-        }
-        #unity-logo img {
-            max-width: 100%;
-            height: auto;
-        }
-        #unity-progress-bar-empty {
-            width: 100%;
-            height: 100%;
-            position: relative;
-        }
-        #unity-progress-bar-full {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0%;
-            height: 100%;
-            background: #4caf50;
-            border-radius: 8px;
-            transition: width 0.3s ease;
-        }
-        #unity-warning {
-            position: absolute;
-            left: 50%;
-            top: 5%;
-            transform: translate(-50%);
-            background: white;
-            padding: 10px;
-            display: none;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-    </style>
+
 </head>
 <body>
     <div id="unity-container">
@@ -97,10 +83,14 @@ window._Yandex_ShowRewarded = function() {
             <div id="unity-progress-bar-empty">
                 <div id="unity-progress-bar-full"></div>
             </div>
+            <br>
+            <div id="loading-text">Loading game assets...</div>
         </div>
         <div id="unity-warning"></div>
     </div>
     <script>
+        const message="Code reworked by onepointfive-REAL on github<br><br>"
+        document.querySelector("#loading-text").innerHTML = `${message}Loading game assets 0%`;
         async function mergeUnityWebFiles(baseUrl, filePrefix, totalParts, extension) {
             const partUrls = [];
             for (let i = 1; i <= totalParts; i++) {
@@ -116,8 +106,12 @@ window._Yandex_ShowRewarded = function() {
                 const buffer = await response.arrayBuffer();
                 buffers.push(buffer);
 
-                const progress = ((i + 1) / totalParts) * 100;
+                let progress = ((i + 1) / totalParts) * 25;
+                if (extension === "wasm") progress += 25;
+                let progressload = ((i + 1) / totalParts) * 50;
+                if (extension === "wasm") progress += 50;
                 document.querySelector("#unity-progress-bar-full").style.width = `${progress}%`;
+                document.querySelector("#loading-text").innerHTML = `${message}Loading game assets ${progressload}%`;
             }
 
             const totalLength = buffers.reduce((acc, buffer) => acc + buffer.byteLength, 0);
@@ -140,7 +134,7 @@ window._Yandex_ShowRewarded = function() {
 
         let myGameInstance = null;
         let isAdShown = false;
-
+        
         function unityShowBanner(msg, type) {
             function updateBannerVisibility() {
                 warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
@@ -151,6 +145,7 @@ window._Yandex_ShowRewarded = function() {
             if (type == 'error') div.style = 'background: red; padding: 10px;';
             else {
                 if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                if (type == 'message') div.style = 'color: white; background: green; padding: 10px;';
                 setTimeout(function() {
                     warningBanner.removeChild(div);
                     updateBannerVisibility();
@@ -158,16 +153,8 @@ window._Yandex_ShowRewarded = function() {
             }
             updateBannerVisibility();
         }
-
-        function showAdOnClick() {
-            if (!isAdShown && typeof sdk !== 'undefined' && typeof sdk.showBanner !== 'undefined') {
-                sdk.showBanner();
-                isAdShown = true;
-            }
-        }
-
-        var buildUrl = "./";
-        var loaderUrl = buildUrl + "Granny.loader.js";
+        var buildUrl = ".";
+        var loaderUrl = buildUrl + "/Granny.loader.js";
 
         async function initializeGame() {
             try {
@@ -179,10 +166,10 @@ window._Yandex_ShowRewarded = function() {
 
                 var config = {
                     dataUrl: dataBlobUrl,
-                    frameworkUrl: buildUrl + "./Granny.framework.js",
+                    frameworkUrl: buildUrl + "/Granny.framework.js",
                     codeUrl: wasmBlobUrl,
-                    streamingAssetsUrl: "https://cdn.jsdelivr.net/gh/gru6nny/ohd@main/StreamingAssets",
-                    companyName: "Anastasia Kazantseva",
+                    streamingAssetsUrl: "https://fake-secure-local/StreamingAssets",
+                    companyName: "onepointfive-REAL",
                     productName: "Granny",
                     productVersion: "1.0",
                     showBanner: unityShowBanner,
@@ -192,13 +179,12 @@ window._Yandex_ShowRewarded = function() {
                 script.src = loaderUrl;
                 script.onload = () => {
                     createUnityInstance(canvas, config, (progress) => {
-                        progressBarFull.style.width = 100 * progress + "%";
+                        progressBarFull.style.width = (50 + (progress * 50)) + "%";
+                        let progressload = Math.floor(progress * 100);
+                        document.querySelector("#loading-text").innerHTML = `${message}Loading unity ${progressload}%`;
                     }).then((unityInstance) => {
                         myGameInstance = unityInstance;
                         loadingBar.style.display = "none";
-                        // Oyun yüklendiğinde tıklama olayını ekle
-                        canvas.addEventListener('pointerdown', showAdOnClick);
-                        canvas.addEventListener('touchstart', showAdOnClick);
                     }).catch((message) => {
                         alert(message);
                     });
