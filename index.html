@@ -109,7 +109,7 @@ alert("Ads removed by onepointfive-REAL on github");
                 let progress = ((i + 1) / totalParts) * 25;
                 if (extension === "wasm") progress += 25;
                 let progressload = ((i + 1) / totalParts) * 50;
-                if (extension === "wasm") progress += 50;
+                if (extension === "wasm") progressload += 50;
                 document.querySelector("#unity-progress-bar-full").style.width = `${progress}%`;
                 document.querySelector("#loading-text").innerHTML = `${message}Loading game assets ${progressload}%`;
             }
