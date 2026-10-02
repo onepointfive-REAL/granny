@@ -2,6 +2,9 @@
 <script>
 // make it work EVERYWHERE! (monkey patch by onepointfive-real)
 (function() {
+    // Dynamically figure out the base path whether on localhost or GitHub Pages
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+
     // 1. Intercept the XMLHttpRequest API (Unity's asset loader)
     const OriginalXHR = window.XMLHttpRequest;
     
@@ -10,9 +13,9 @@
         const originalOpen = xhr.open;
 
         xhr.open = function(method, url, async, user, password) {
-            // If Unity tries to fetch from our dummy secure domain, redirect it locally!
+            // Redirect smoothly to the correct subfolder location
             if (typeof url === 'string' && url.includes('https://fake-secure-local/')) {
-                url = url.replace('https://fake-secure-local/', './');
+                url = url.replace('https://fake-secure-local/', basePath);
             }
             return originalOpen.apply(this, [method, url, async, user, password]);
         };
@@ -25,9 +28,9 @@
     const originalFetch = window.fetch;
     window.fetch = function(input, init) {
         if (typeof input === 'string' && input.includes('https://fake-secure-local/')) {
-            input = input.replace('https://fake-secure-local/', './');
+            input = input.replace('https://fake-secure-local/', basePath);
         } else if (input instanceof Request && input.url.includes('https://fake-secure-local/')) {
-            const localUrl = input.url.replace('https://fake-secure-local/', './');
+            const localUrl = input.url.replace('https://fake-secure-local/', basePath);
             input = new Request(localUrl, input);
         }
         return originalFetch(input, init);
