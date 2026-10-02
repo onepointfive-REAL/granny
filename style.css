@@ -5,7 +5,6 @@ body {
     padding: 0;
     margin: 0;
     overflow: hidden;
-    /* background: url('./background.png') no-repeat center center fixed; no background rn sorry*/
     background-size: cover;
     width: 100vw;
     height: 100vh;
@@ -66,9 +65,20 @@ body {
     height: 130px; 
     background: url('unity-logo-dark.png') no-repeat center;
     background-size: contain;
-    
-    /* Clean, safe vertical spacing rule */
     margin-bottom: 20px; 
+}
+
+/* FIX: Explicitly style and protect the dynamic layout text container */
+#loading-text {
+    display: block;
+    width: 100%;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 12px;
+    background: none !important;
+    border: none !important;
 }
 
 /* Single capsule track wrapper */
@@ -147,12 +157,4 @@ body {
     border-radius: 4px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     z-index: 1000;
-}
-#loading-text {
-    width: 100%;
-    color: #ffffff;
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    text-align: center;
-    margin-bottom: 12px;
 }
